@@ -1,5 +1,7 @@
 import java.io.*;
 import java.net.*;
+import java.util.HashMap;
+
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
 import org.w3c.dom.Document;
@@ -12,12 +14,13 @@ public class client {
     private DataOutputStream out = null;
     private static String[] messageArr; // Holds the incoming message in array by separated space " ".
     private static String message; // Holds the entire incoming message as string.
+    private static HashMap<String, Server> serverList;
 
     // Client Commands
     private static final String HELO = "HELO"; // Initial hello to the server
     private static final String AUTH = "AUTH ashwin"; // Authentication detais
     private static final String REDY = "REDY"; // Client is ready.
-    private static final String Capable = "Capable"; // Space
+    private static final String Capable = "Capable"; // request capable surver to run that job.
     private static final String SPACE = " "; // Space
     private static final String OK = "OK"; // OK
     private static final String GETS = "GETS"; // request for server state information
@@ -33,14 +36,40 @@ public class client {
     private static final String TERM = "TERM"; // request to terminate a server
     private static final String QUIT = "QUIT"; // request to quit
 
-    private static String serverType; // Server Type
-    private static String serverCore; // Server core
-    private static int serverID; // Server core
-
     public client(String address, int port) throws Exception { // Client socket connection
+        serverList = new HashMap<String, Server>();
+
         socket = new Socket(address, port);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         out = new DataOutputStream(socket.getOutputStream());
+    }
+
+    public static void loadServerFromFile() {
+        try {
+
+            File file = new File("ds-system.xml"); // file location
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(file);
+            NodeList nodeList = doc.getElementsByTagName("server"); // nodeList is not iterable, so we are using for
+
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node node = nodeList.item(i);
+                String type = (node.getAttributes().getNamedItem("type").getTextContent());
+                String limit = (node.getAttributes().getNamedItem("limit").getTextContent());
+                String bootupTime = (node.getAttributes().getNamedItem("bootupTime").getTextContent());
+                String hourlyRate = (node.getAttributes().getNamedItem("hourlyRate").getTextContent());
+                String coreCount = (node.getAttributes().getNamedItem("coreCount").getTextContent());
+                String memory = (node.getAttributes().getNamedItem("memory").getTextContent());
+                String disk = (node.getAttributes().getNamedItem("disk").getTextContent());
+                Server server = new Server(type, limit, bootupTime, hourlyRate, coreCount, memory, disk);
+                serverList.put(type, server);
+            }
+            System.out.println(serverList);
+
+        } catch (Exception e) {
+            System.out.println(e);
+        }
     }
 
     public String[] readmsg() throws Exception { // Read the incoming message
@@ -75,6 +104,7 @@ public class client {
             client.readmsg(); // read back
 
             client.sendMsg(AUTH); // send username
+            loadServerFromFile();
 
             while (client.readmsg()[0] != "nonsence") {
 
@@ -83,64 +113,65 @@ public class client {
                 }
 
                 switch (messageArr[0]) {
-                case "JOBN": // send jobs
+                    case "JOBN": // send jobs
 
-                    String jobArr[] = messageArr;
+                        String jobArr[] = messageArr;
 
-                    client.sendMsg(GETS + SPACE + Capable + SPACE + jobArr[4] + SPACE + jobArr[5] + SPACE + jobArr[6]);
+                        client.sendMsg(
+                                GETS + SPACE + Capable + SPACE + jobArr[4] + SPACE + jobArr[5] + SPACE + jobArr[6]);
 
-                    client.readmsg();
+                        client.readmsg();
 
-                    int size = Integer.parseInt(messageArr[1]);
-                    String[][] arr = new String[9][size];
+                        int size = Integer.parseInt(messageArr[1]);
+                        String[][] arr = new String[9][size];
 
-                    client.sendMsg(OK);
+                        client.sendMsg(OK);
 
-                    for (int i = 0; i < size; i++) {
-                        String temp[] = client.readmsg();
-                        for (int j = 0; j < 9; j++) {
-                            arr[j][i] = temp[j];
+                        for (int i = 0; i < size; i++) {
+                            String temp[] = client.readmsg();
+                            for (int j = 0; j < 9; j++) {
+                                arr[j][i] = temp[j];
+
+                            }
+                        }
+
+                        client.sendMsg(OK);
+                        client.readmsg();
+
+                        if (messageArr[0].equals(".")) {
+
+                            client.sendMsg(SCHD + SPACE + jobArr[2] + SPACE + arr[0][0] + SPACE + arr[1][0]);
 
                         }
-                    }
 
-                    client.sendMsg(OK);
-                    client.readmsg();
+                        break;
 
-                    if (messageArr[0].equals(".")) {
+                    case "JOBP":
+                        System.out.println("JOBP");
 
-                        client.sendMsg(SCHD + SPACE + jobArr[2] + SPACE + arr[0][0] + SPACE + arr[1][0]);
+                        break;
 
-                    }
+                    case "JCPL":
+                        System.out.println(message);
+                        client.sendMsg(REDY);
 
-                    break;
+                        break;
 
-                case "JOBP":
-                    System.out.println("JOBP");
+                    case "RESF":
+                        System.out.println("RESF");
 
-                    break;
+                    case "RESR":
+                        System.out.println("RESR");
 
-                case "JCPL":
-                    System.out.println(message);
-                    client.sendMsg(REDY);
+                        break;
 
-                    break;
-
-                case "RESF":
-                    System.out.println("RESF");
-
-                case "RESR":
-                    System.out.println("RESR");
-
-                    break;
-
-                case "NONE": // quit
-                    client.sendMsg(QUIT);
-                    client.readmsg();
-                    client.in.close();
-                    client.out.close();
-                    client.socket.close();
-                    break;
+                    case "NONE": // quit
+                        client.sendMsg(QUIT);
+                        client.readmsg();
+                        client.in.close();
+                        client.out.close();
+                        client.socket.close();
+                        break;
                 }
 
             }
