@@ -1,5 +1,5 @@
 public class Job {
-
+    // Self explanatory naming convention
     private int startTime;
     private int jobID;
     private int runTime;
@@ -7,14 +7,14 @@ public class Job {
     private int memoryReq;
     private int diskReq;
 
-    public Job(int s, int j, int r, int c, int m, int d) {
+    public Job(int startTime, int jobID, int runTime, int coreReq, int memoryReq, int diskReq) {
 
-        startTime = s;
-        jobID = j;
-        runTime = r;
-        coreReq = c;
-        memoryReq = m;
-        diskReq = d;
+        this.startTime = startTime;
+        this.jobID = jobID;
+        this.runTime = runTime;
+        this.coreReq = coreReq;
+        this.memoryReq = memoryReq;
+        this.diskReq = diskReq;
 
     }
 

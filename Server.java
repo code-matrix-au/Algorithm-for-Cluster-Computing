@@ -1,63 +1,34 @@
-
+//Self explanatory naming convention
 public class Server {
 
     private String type;
-    private int limit;
-    private int bootupTime;
-    private int hourlyRate;
-    private int coreCount;
-    private int memory;
-    private int disk;
     private int serverID;
     private String state;
     private int startTime;
+    private int coreCount;
+    private int memory;
+    private int disk;
     private int wJobs;
     private int rJobs;
 
-    public Server(String t, int l, int b, int h, int c, int m, int d) {
 
-        type = t;
-        limit = l;
-        bootupTime = b;
-        hourlyRate = h;
-        coreCount = c;
-        memory = m;
-        disk = d;
+    public Server(String type, int serverID, String state, int startTime, int coreCount, int memory, int disk, int wJobs, int rJobs) {
 
-    }
-
-    public Server(String t, int i, String s, int startT, int c, int m, int d, int w, int r) {
-
-        type = t;
-        serverID = i;
-        state = s;
-        startTime = startT;
-        coreCount = c;
-        memory = m;
-        disk = d;
-        wJobs = w;
-        rJobs = r;
+        this.type = type;
+        this.serverID = serverID;
+        this.state = state;
+        this.startTime = startTime;
+        this.coreCount = coreCount;
+        this.memory = memory;
+        this.disk = disk;
+        this.wJobs = wJobs;
+        this.rJobs = rJobs;
 
     }
 
     public String getType() {
 
         return type;
-    }
-
-    public int getLimit() {
-
-        return limit;
-    }
-
-    public int getBootupTime() {
-
-        return bootupTime;
-    }
-
-    public int getHourlyRate() {
-
-        return hourlyRate;
     }
 
     public int getCoreCount() {
