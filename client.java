@@ -1,24 +1,21 @@
+/**\
+ * By: Ashiwn Bhanderi
+ * ID: 44164971
+ * Unit: Comp 3100
+ * Deliverables: Reduce server rental cost. 
+ */
+
 import java.io.*;
 import java.net.*;
 import java.util.HashMap;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.DocumentBuilder;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.Node;
-
 public class client {
-    private Socket socket = null;
+    private Socket socket = null; 
     private BufferedReader in = null;
-
     private static  DataOutputStream out = null;
     private static String[] messageArr; // Holds the incoming message in array by separated space " ".
-    private static String message; // Holds the entire incoming message as string.
-    private static HashMap<String, Server> serverList;
-    private static HashMap<String, Job> jobList;
-    private static HashMap<String, Server> capableServerList;
-    private static String [] firstCapableServer;
+    private static HashMap<String, Server> capableServerList; // Store list of capable server/job.
+    private static String [] firstCapableServer; // Stores the first capable server/job.
 
     // Client Commands
     private static final String HELO = "HELO"; // Initial hello to the server
@@ -28,71 +25,24 @@ public class client {
     private static final String SPACE = " "; // Space
     private static final String OK = "OK"; // OK
     private static final String GETS = "GETS"; // request for server state information
-    private static final String GETSALL = "GETS All"; // request for server state information
     private static final String SCHD = "SCHD"; // actual scheduling decision
-    private static final String CNTJ = "CNTJ"; // request job count on a specified server, of a particular job state
-    private static final String EJWT = "EJWT"; // request for sum of estimated waiting time
-    private static final String LSTJ = "LSTJ"; // request information on running and waiting jobs on a particular
-                                               // server
-    private static final String PSHJ = "PSHJ"; // request to get next job skipping current job without scheduling
-    private static final String MIGJ = "MIGJ"; // request to migrate a job
-    private static final String KILJ = "KILJ"; // signal to kill a specific job
-    private static final String TERM = "TERM"; // request to terminate a server
     private static final String QUIT = "QUIT"; // request to quit
 
-    public client(String address, int port) throws Exception { // Client socket connection
-        serverList = new HashMap<String, Server>();
-        jobList = new HashMap<String, Job>();
-        capableServerList = new HashMap<String, Server>();
-        firstCapableServer = new String [9];
 
+    public client(String address, int port) throws Exception { // Client socket connection
+        capableServerList = new HashMap<String, Server>();
+        firstCapableServer = new String [9]; // 9 items to store
         socket = new Socket(address, port);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         out = new DataOutputStream(socket.getOutputStream());
     }
 
-    public static void loadServerFromFile() {
-        try {
-
-            File file = new File("ds-system.xml"); // file location
-            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-            DocumentBuilder db = dbf.newDocumentBuilder();
-            Document doc = db.parse(file);
-            NodeList nodeList = doc.getElementsByTagName("server"); // nodeList is not iterable, so we are using for
-
-            for (int i = 0; i < nodeList.getLength(); i++) {
-                Node node = nodeList.item(i);
-                String type = (node.getAttributes().getNamedItem("type").getTextContent());
-                String limit = (node.getAttributes().getNamedItem("limit").getTextContent());
-                String bootupTime = (node.getAttributes().getNamedItem("bootupTime").getTextContent());
-                String hourlyRate = (node.getAttributes().getNamedItem("hourlyRate").getTextContent());
-                String coreCount = (node.getAttributes().getNamedItem("coreCount").getTextContent());
-                String memory = (node.getAttributes().getNamedItem("memory").getTextContent());
-                String disk = (node.getAttributes().getNamedItem("disk").getTextContent());
-                Server server= new Server(type, Integer.parseInt(limit), 
-                                                Integer.parseInt(bootupTime),
-                                                Integer.parseInt(hourlyRate), 
-                                                Integer.parseInt(coreCount), 
-                                                Integer.parseInt(memory),
-                                                Integer.parseInt(disk));
-                serverList.put(type, server);
-            }
-
-        } catch (Exception e) {
-            // System.out.println(e);
-        }
-    }
-
     public String[] readmsg() throws Exception { // Read the incoming message
 
         var str = in.readLine();
-
         String inputMsg = str.toString();
-        message = inputMsg;
         messageArr = inputMsg.split("\\s+"); // split the message by space
-
         return messageArr;
-
     }
 
     public static  void sendMsg(String msg) throws IOException { // send message to the server
@@ -100,24 +50,21 @@ public class client {
         String m = msg + "\n"; // add new line character on the end of all the messages.
         byte[] message = m.getBytes();
         out.write(message);
-        out.flush();
-
+        out.flush(); 
     }
     public static void algorithmLowCost(Job job) throws IOException{
-
  
-        for(Server server:capableServerList.values()){
+        for(Server server:capableServerList.values()){  // iterate list of servers and get low cost server
             if(server.getCoreCount() >= job.getCoreReq() &&
                 server.getMemory() >= job.getMemoryReq() &&
                 server.getDisk() >= job.getDiskReq() &&
                 job.getStartTime() >= job.getRunTime()){
-                   // System.out.println("Job by alorithm");
+                    // if server found, schedule the job and return to calling function.
                     client.sendMsg(SCHD + SPACE + job.getJobID() + SPACE + server.getType() + SPACE + server.getServerID());
                     return;
                 }
         }
-       // System.out.println("Job to the first server");
-        
+        // if algorith cannot find the best server, assign job to the first server.
         client.sendMsg(SCHD + SPACE + job.getJobID() + SPACE + firstCapableServer[0] + SPACE + firstCapableServer[1]);
 
     }
@@ -133,95 +80,90 @@ public class client {
             client.readmsg(); // read back
 
             client.sendMsg(AUTH); // send username
-
-            loadServerFromFile(); // load the server list from the file.
-
+       
             while (client.readmsg()[0] != "nonsence") {
 
                 if (messageArr[0].equals(OK)) {
-                    client.sendMsg(REDY);
+                    client.sendMsg(REDY); // send client is ready to receive data.
                 }
 
                 switch (messageArr[0]) {
-                    case "JOBN": // send jobs
+                    case "JOBN": // We received a job to schedule.
 
+                        /**
+                         * create a Job object and store job details.
+                         * Convert string to interger
+                        */ 
                         Job job = new Job(Integer.parseInt(messageArr[1]),
-                                        Integer.parseInt( messageArr[2]), 
-                                        Integer.parseInt( messageArr[3]), 
-                                        Integer.parseInt(messageArr[4]),  
-                                        Integer.parseInt(messageArr[5]),
-                                        Integer.parseInt(messageArr[6]));
+                                          Integer.parseInt(messageArr[2]), 
+                                          Integer.parseInt(messageArr[3]), 
+                                          Integer.parseInt(messageArr[4]),  
+                                          Integer.parseInt(messageArr[5]),
+                                          Integer.parseInt(messageArr[6]));
 
-                        client.sendMsg(GETS + SPACE + Capable + SPACE + job.getCoreReq() + SPACE + job.getMemoryReq()
-                                + SPACE + job.getDiskReq());
-
+                        // Request for capable server to run the job reeived.                
+                        client.sendMsg(GETS + SPACE 
+                                            + Capable 
+                                            + SPACE 
+                                            + job.getCoreReq() 
+                                            + SPACE 
+                                            + job.getMemoryReq()
+                                            + SPACE 
+                                            + job.getDiskReq());
+                               
                         String[] msg = client.readmsg(); // read the data back from gets capable
 
                         client.sendMsg(OK); // Send Ok to receive the server list
+
+                        //add the capable servers to the list
                         for (int i = 0; i < Integer.parseInt(msg[1]); i++) {
                             String[] server = client.readmsg();
                             if( i == 0){
-                                firstCapableServer = server;
+                                firstCapableServer = server; // store the first server
                             }
 
                             Server s = new Server(server[0], 
-                                 Integer.parseInt(server[1]), 
-                                                  server[2],
-                                    Integer.parseInt(server[3]),
-                                    Integer.parseInt(server[4]),
-                                    Integer.parseInt(server[5]), 
-                                    Integer.parseInt(server[6]),
-                                    Integer.parseInt(server[7]), 
-                                    Integer.parseInt(server[8]));
-                            capableServerList.put(server[0] + " " + server[1], s);
+                                Integer.parseInt(server[1]), 
+                                                 server[2],
+                                Integer.parseInt(server[3]),
+                                Integer.parseInt(server[4]),
+                                Integer.parseInt(server[5]), 
+                                Integer.parseInt(server[6]),
+                                Integer.parseInt(server[7]), 
+                                Integer.parseInt(server[8]));
+                            capableServerList.put(server[0] + " " + server[1], s); // Add to the hashMap
 
                         }
 
-                        client.sendMsg(OK);
+                        client.sendMsg(OK);// ACK to the server that we have received servers.
 
                         client.readmsg();
 
-                        if (messageArr[0].equals(".")) {
-                            algorithmLowCost(job);
-                            capableServerList.clear();
+                        if (messageArr[0].equals(".")) { // check if we are ready to schedule
+                            algorithmLowCost(job); // call the algorithm function
+                            capableServerList.clear(); // clear the list for the next job.
                         }
 
                         break;
 
-                    case "JOBP":
-                        // System.out.println("JOBP");
-
-                        break;
-
-                    case "JCPL":
-                        // System.out.println(message);
+                    case "JCPL":// job complete
                         client.sendMsg(REDY);
 
                         break;
 
-                    case "RESF":
-                        // System.out.println("RESF");
-
-                    case "RESR":
-                        // System.out.println("RESR");
-
-                        break;
-
                     case "NONE": // quit
-                        client.sendMsg(QUIT);
+                        client.sendMsg(QUIT); // send quit
                         client.readmsg();
                         client.in.close();
                         client.out.close();
                         client.socket.close();
                         break;
                 }
-
             }
 
         } catch (
 
         Exception e) {
-            // System.out.println(e);
         }
     }
 }
