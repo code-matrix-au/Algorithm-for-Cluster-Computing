@@ -11,14 +11,18 @@ import org.w3c.dom.Node;
 public class client {
     private Socket socket = null;
     private BufferedReader in = null;
-    private DataOutputStream out = null;
+
+    private static  DataOutputStream out = null;
     private static String[] messageArr; // Holds the incoming message in array by separated space " ".
     private static String message; // Holds the entire incoming message as string.
     private static HashMap<String, Server> serverList;
+    private static HashMap<String, Job> jobList;
+    private static HashMap<String, Server> capableServerList;
+    private static String [] firstCapableServer;
 
     // Client Commands
     private static final String HELO = "HELO"; // Initial hello to the server
-    private static final String AUTH = "AUTH ashwin"; // Authentication detais
+    private static final String AUTH = "AUTH " + System.getProperty("user.name"); // Authentication detais
     private static final String REDY = "REDY"; // Client is ready.
     private static final String Capable = "Capable"; // request capable surver to run that job.
     private static final String SPACE = " "; // Space
@@ -38,6 +42,9 @@ public class client {
 
     public client(String address, int port) throws Exception { // Client socket connection
         serverList = new HashMap<String, Server>();
+        jobList = new HashMap<String, Job>();
+        capableServerList = new HashMap<String, Server>();
+        firstCapableServer = new String [9];
 
         socket = new Socket(address, port);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -62,13 +69,17 @@ public class client {
                 String coreCount = (node.getAttributes().getNamedItem("coreCount").getTextContent());
                 String memory = (node.getAttributes().getNamedItem("memory").getTextContent());
                 String disk = (node.getAttributes().getNamedItem("disk").getTextContent());
-                Server server = new Server(type, limit, bootupTime, hourlyRate, coreCount, memory, disk);
+                Server server= new Server(type, Integer.parseInt(limit), 
+                                                Integer.parseInt(bootupTime),
+                                                Integer.parseInt(hourlyRate), 
+                                                Integer.parseInt(coreCount), 
+                                                Integer.parseInt(memory),
+                                                Integer.parseInt(disk));
                 serverList.put(type, server);
             }
-            System.out.println(serverList);
 
         } catch (Exception e) {
-            System.out.println(e);
+            // System.out.println(e);
         }
     }
 
@@ -84,12 +95,30 @@ public class client {
 
     }
 
-    public void sendMsg(String msg) throws IOException { // send message to the server
+    public static  void sendMsg(String msg) throws IOException { // send message to the server
 
         String m = msg + "\n"; // add new line character on the end of all the messages.
         byte[] message = m.getBytes();
         out.write(message);
         out.flush();
+
+    }
+    public static void algorithmLowCost(Job job) throws IOException{
+
+ 
+        for(Server server:capableServerList.values()){
+            if(server.getCoreCount() >= job.getCoreReq() &&
+                server.getMemory() >= job.getMemoryReq() &&
+                server.getDisk() >= job.getDiskReq() &&
+                job.getStartTime() >= job.getRunTime()){
+                   // System.out.println("Job by alorithm");
+                    client.sendMsg(SCHD + SPACE + job.getJobID() + SPACE + server.getType() + SPACE + server.getServerID());
+                    return;
+                }
+        }
+       // System.out.println("Job to the first server");
+        
+        client.sendMsg(SCHD + SPACE + job.getJobID() + SPACE + firstCapableServer[0] + SPACE + firstCapableServer[1]);
 
     }
 
@@ -104,7 +133,8 @@ public class client {
             client.readmsg(); // read back
 
             client.sendMsg(AUTH); // send username
-            loadServerFromFile();
+
+            loadServerFromFile(); // load the server list from the file.
 
             while (client.readmsg()[0] != "nonsence") {
 
@@ -115,53 +145,65 @@ public class client {
                 switch (messageArr[0]) {
                     case "JOBN": // send jobs
 
-                        String jobArr[] = messageArr;
+                        Job job = new Job(Integer.parseInt(messageArr[1]),
+                                        Integer.parseInt( messageArr[2]), 
+                                        Integer.parseInt( messageArr[3]), 
+                                        Integer.parseInt(messageArr[4]),  
+                                        Integer.parseInt(messageArr[5]),
+                                        Integer.parseInt(messageArr[6]));
 
-                        client.sendMsg(
-                                GETS + SPACE + Capable + SPACE + jobArr[4] + SPACE + jobArr[5] + SPACE + jobArr[6]);
+                        client.sendMsg(GETS + SPACE + Capable + SPACE + job.getCoreReq() + SPACE + job.getMemoryReq()
+                                + SPACE + job.getDiskReq());
 
-                        client.readmsg();
+                        String[] msg = client.readmsg(); // read the data back from gets capable
 
-                        int size = Integer.parseInt(messageArr[1]);
-                        String[][] arr = new String[9][size];
-
-                        client.sendMsg(OK);
-
-                        for (int i = 0; i < size; i++) {
-                            String temp[] = client.readmsg();
-                            for (int j = 0; j < 9; j++) {
-                                arr[j][i] = temp[j];
-
+                        client.sendMsg(OK); // Send Ok to receive the server list
+                        for (int i = 0; i < Integer.parseInt(msg[1]); i++) {
+                            String[] server = client.readmsg();
+                            if( i == 0){
+                                firstCapableServer = server;
                             }
+
+                            Server s = new Server(server[0], 
+                                 Integer.parseInt(server[1]), 
+                                                  server[2],
+                                    Integer.parseInt(server[3]),
+                                    Integer.parseInt(server[4]),
+                                    Integer.parseInt(server[5]), 
+                                    Integer.parseInt(server[6]),
+                                    Integer.parseInt(server[7]), 
+                                    Integer.parseInt(server[8]));
+                            capableServerList.put(server[0] + " " + server[1], s);
+
                         }
 
                         client.sendMsg(OK);
+
                         client.readmsg();
 
                         if (messageArr[0].equals(".")) {
-
-                            client.sendMsg(SCHD + SPACE + jobArr[2] + SPACE + arr[0][0] + SPACE + arr[1][0]);
-
+                            algorithmLowCost(job);
+                            capableServerList.clear();
                         }
 
                         break;
 
                     case "JOBP":
-                        System.out.println("JOBP");
+                        // System.out.println("JOBP");
 
                         break;
 
                     case "JCPL":
-                        System.out.println(message);
+                        // System.out.println(message);
                         client.sendMsg(REDY);
 
                         break;
 
                     case "RESF":
-                        System.out.println("RESF");
+                        // System.out.println("RESF");
 
                     case "RESR":
-                        System.out.println("RESR");
+                        // System.out.println("RESR");
 
                         break;
 
@@ -179,7 +221,7 @@ public class client {
         } catch (
 
         Exception e) {
-            System.out.println(e);
+            // System.out.println(e);
         }
     }
 }

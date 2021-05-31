@@ -2,14 +2,19 @@
 public class Server {
 
     private String type;
-    private String limit;
-    private String bootupTime;
-    private String hourlyRate;
-    private String coreCount;
-    private String memory;
-    private String disk;
+    private int limit;
+    private int bootupTime;
+    private int hourlyRate;
+    private int coreCount;
+    private int memory;
+    private int disk;
+    private int serverID;
+    private String state;
+    private int startTime;
+    private int wJobs;
+    private int rJobs;
 
-    public Server(String t, String l, String b, String h, String c, String m, String d) {
+    public Server(String t, int l, int b, int h, int c, int m, int d) {
 
         type = t;
         limit = l;
@@ -18,6 +23,21 @@ public class Server {
         coreCount = c;
         memory = m;
         disk = d;
+
+    }
+
+    public Server(String t, int i, String s, int startT, int c, int m, int d, int w, int r) {
+
+        type = t;
+        serverID = i;
+        state = s;
+        startTime = startT;
+        coreCount = c;
+        memory = m;
+        disk = d;
+        wJobs = w;
+        rJobs = r;
+
     }
 
     public String getType() {
@@ -25,34 +45,59 @@ public class Server {
         return type;
     }
 
-    public String getLimit() {
+    public int getLimit() {
 
         return limit;
     }
 
-    public String getBootupTime() {
+    public int getBootupTime() {
 
         return bootupTime;
     }
 
-    public String getHourlyRate() {
+    public int getHourlyRate() {
 
         return hourlyRate;
     }
 
-    public String getCoreCount() {
+    public int getCoreCount() {
 
         return coreCount;
     }
 
-    public String getMemory() {
+    public int getMemory() {
 
         return memory;
     }
 
-    public String getDisk() {
+    public int getDisk() {
 
         return disk;
+    }
+
+    public int getServerID() {
+
+        return serverID;
+    }
+
+    public String getstate() {
+
+        return state;
+    }
+
+    public int getstartTime() {
+
+        return startTime;
+    }
+
+    public int getwJobs() {
+
+        return wJobs;
+    }
+
+    public int getRJobs() {
+
+        return rJobs;
     }
 
 }
